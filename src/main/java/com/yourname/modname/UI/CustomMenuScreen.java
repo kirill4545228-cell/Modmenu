@@ -1,49 +1,66 @@
-package com.yourname.modname;
+package com.yourname.modname.UI;
 
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
+import com.yourname.modname.ExampleMod;
+import io.netty.buffer.Unpooled;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
-public class ExampleMod implements ModInitializer {
-    public static final String MOD_ID = "utilitymenu";
+public class CustomMenuScreen extends Screen {
+    private static final int BG_WIDTH = 280;
+    private static final int BG_HEIGHT = 220;
 
-    public static final Identifier WEATHER_PACKET_ID = new Identifier(MOD_ID, "set_weather");
-    public static final Identifier TIME_PACKET_ID = new Identifier(MOD_ID, "set_time");
-    public static final Identifier GIVE_PACKET_ID = new Identifier(MOD_ID, "give_item");
+    public CustomMenuScreen() {
+        super(Text.literal("Мой мод"));
+    }
 
     @Override
-    public void onInitialize() {
-        ServerPlayNetworking.registerGlobalReceiver(WEATHER_PACKET_ID, (server, player, handler, buf, responseSender) -> {
-            String type = buf.readString();
-            server.execute(() -> {
-                if (player.hasPermissionLevel(2)) {
-                    if (type.equals("clear")) player.getServerWorld().setWeather(0, 6000, false, false);
-                    if (type.equals("rain")) player.getServerWorld().setWeather(6000, 0, true, false);
-                }
-            });
-        });
+    protected void init() {
+        super.init();
+        int centerX = (this.width - BG_WIDTH) / 2;
+        int centerY = (this.height - BG_HEIGHT) / 2;
 
-        ServerPlayNetworking.registerGlobalReceiver(TIME_PACKET_ID, (server, player, handler, buf, responseSender) -> {
-            String timeType = buf.readString();
-            server.execute(() -> {
-                if (player.hasPermissionLevel(2)) {
-                    if (timeType.equals("day")) player.getServerWorld().setTimeOfDay(1000);
-                    if (timeType.equals("night")) player.getServerWorld().setTimeOfDay(13000);
-                }
-            });
-        });
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("☀️ Включить солнце"), button -> {
+            PacketByteBuf packet = new PacketByteBuf(Unpooled.buffer());
+            packet.writeString("clear");
+            ClientPlayNetworking.send(ExampleMod.WEATHER_PACKET_ID, packet);
+        }).dimensions(centerX + 20, centerY + 50, 240, 20).build());
 
-        ServerPlayNetworking.registerGlobalReceiver(GIVE_PACKET_ID, (server, player, handler, buf, responseSender) -> {
-            Identifier itemId = buf.readIdentifier();
-            server.execute(() -> {
-                if (player.hasPermissionLevel(2)) {
-                    Item item = Registries.ITEM.get(itemId);
-                    player.giveItemStack(new ItemStack(item));
-                }
-            });
-        });
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("⏰ Утро / День"), button -> {
+            PacketByteBuf packet = new PacketByteBuf(Unpooled.buffer());
+            packet.writeString("day");
+            ClientPlayNetworking.send(ExampleMod.TIME_PACKET_ID, packet);
+        }).dimensions(centerX + 20, centerY + 80, 240, 20).build());
+
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("💎 Выдать алмаз"), button -> {
+            PacketByteBuf packet = new PacketByteBuf(Unpooled.buffer());
+            packet.writeIdentifier(new Identifier("minecraft", "diamond"));
+            ClientPlayNetworking.send(ExampleMod.GIVE_PACKET_ID, packet);
+        }).dimensions(centerX + 20, centerY + 110, 240, 20).build());
+    }
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+
+        int centerX = (this.width - BG_WIDTH) / 2;
+        int centerY = (this.height - BG_HEIGHT) / 2;
+
+        context.fill(centerX, centerY, centerX + BG_WIDTH, centerY + BG_HEIGHT, 0xFF1E1B29);
+        context.fillBorder(centerX, centerY, centerX + BG_WIDTH, centerY + BG_HEIGHT, 0xFF4A3B69);
+
+        context.drawText(this.textRenderer, Text.literal("✨ Мой мод"), centerX + 20, centerY + 15, 0xD4B8FF, true);
+        context.drawText(this.textRenderer, Text.literal("Новые возможности в вашем мире"), centerX + 20, centerY + 28, 0x8A79A6, false);
+
+        super.render(context, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public boolean shouldPause() {
+        return false;
     }
 }
