@@ -27,6 +27,5 @@ jobs:
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name:-mod-jar
+          name: utility-menu-mod
           path: build/libs/*.jar
-          
